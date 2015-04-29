@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Edmodo Tomatoes</string>
+    <string name="title_movie_detail">Movie Detail</string>
+    <string name="label_mpaa_rated">"Rated: "</string>
+    <string name="label_critics">"Critics: "</string>
+    <string name="label_audience">"Audience: "</string>
+    <string name="label_runtime">"Runtime: "</string>
+    <string name="label_consensus">Critics Consensus</string>
+    <string name="label_synopsis">Synopsis</string>
+    <string name="label_cast">Cast</string>
+</resources>

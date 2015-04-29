@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ex_title">Movie Title</string>
+    <string name="ex_mpaa_rating">G</string>
+    <string name="ex_critics_ratings">Rotten (48)</string>
+    <string name="ex_critics_score">48</string>
+    <string name="ex_audience_ratings">Upright (79)</string>
+    <string name="ex_audience_score">79</string>
+    <string name="ex_runtime">1:55</string>
+    <string name="ex_consensus">So-so, so they say...</string>
+    <string name="ex_synopsis">And then...</string>
+    <string name="ex_cast">Major Star, Minor Star, Major Wannabe, Minor Wannabe, Major Hasbeen</string>
+    <string name="ex_genres">Genre1, Genre2</string>
+</resources>
