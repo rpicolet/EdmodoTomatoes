@@ -1,7 +1,6 @@
 package rpicolet.edmodotomatoes.model;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import android.util.Log;
 
@@ -16,9 +15,9 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 
 import rpicolet.edmodotomatoes.MovieVolley;
-import rpicolet.edmodotomatoes.control.MovieListAdapter;
 
-public class MovieList extends ArrayList<Movie> implements List<Movie> {
+public class MovieList extends ArrayList<Movie>
+		implements IMovieList {
 
 	private static final int INITIAL_ALLOC = 200;
 	private static final int PAGE_LIMIT = 20;
@@ -33,10 +32,11 @@ public class MovieList extends ArrayList<Movie> implements List<Movie> {
 
 	private boolean mLoadInProgress = false;
 	private int mTotalMovies = 0;
+	private IOnLoadListener mMovieListListener;
 	private RequestQueue mRequestQueue;
-	private Response.Listener<JSONObject> mSuccessListener;
-	private Response.ErrorListener mErrorListener;
-	private MovieListAdapter mMovieListAdapter;
+	private Response.Listener<JSONObject> mResponseSuccessListener;
+	private Response.ErrorListener mResponseErrorListener;
+
 
 	public static MovieList getInstance() {
 		if (mInstance == null)
@@ -49,27 +49,26 @@ public class MovieList extends ArrayList<Movie> implements List<Movie> {
 		mRequestQueue = MovieVolley.getRequestQueue();
 	}
 
-	public void setAdapter(MovieListAdapter adapter) {
-		if (mMovieListAdapter != null)
+	// IMovieList methods
+
+	@Override
+	public void setListener(IOnLoadListener listener) {
+		if (mMovieListListener != null)
 			// Returning from MovieDetailActivity...
 			return;
-		mMovieListAdapter = adapter;
-		mSuccessListener = createSuccessListener();
-		mErrorListener = createErrorListener();
+		mMovieListListener = listener;
+		mResponseSuccessListener = createSuccessListener();
+		mResponseErrorListener = createErrorListener();
 	}
 
-	/**
-	 *
-	 * @param onlyIfEmpty - if true, only loads if List is empty
-	 * @return - true if load Request generated
-	 */
-	public boolean loadMovies(boolean onlyIfEmpty) {
-		if (mMovieListAdapter == null)
+	@Override
+	public void loadMovies(boolean onlyIfEmpty) {
+		if (mMovieListListener == null)
 			throw new IllegalStateException("MovieListAdapter not set");
 
 		if ((onlyIfEmpty && hasLoadedMovies()) ||
 				isFullyLoaded() || mLoadInProgress)
-			return false;
+			return;
 
 		Log.d(TAG, "load Request...");
 		mLoadInProgress = true;
@@ -82,20 +81,28 @@ public class MovieList extends ArrayList<Movie> implements List<Movie> {
 						"&country="    + "us" +
 						"&apikey="     + RT_API_KEY,
 				null,
-				mSuccessListener,
-				mErrorListener);
+				mResponseSuccessListener,
+				mResponseErrorListener);
 
 		mRequestQueue.add(jsonObjReq);
-		return true;
 	}
 
+	@Override
+	public boolean isLoading() {
+		return mLoadInProgress;
+	}
+
+	@Override
 	public boolean hasLoadedMovies() {
 		return size() > 0;
 	}
 
+	@Override
 	public boolean isFullyLoaded() {
 		return hasLoadedMovies() && mTotalMovies <= size();
 	}
+
+	// Volley Response Listeners
 
 	private Response.Listener<JSONObject> createSuccessListener() {
 		return new Response.Listener<JSONObject>() {
@@ -108,10 +115,10 @@ public class MovieList extends ArrayList<Movie> implements List<Movie> {
 					int length = jsonMovies.length();
 					for (int i = 0; i < length; i++)
 						add(new Movie(jsonMovies.getJSONObject(i)));
-					mMovieListAdapter.notifyDataSetChanged();
+					mMovieListListener.onLoadSuccess();
 					mLoadInProgress = false;
 				} catch (JSONException e) {
-					mMovieListAdapter.onLoadError();
+					mMovieListListener.onLoadError();
 				}
 			}
 		};
@@ -121,7 +128,7 @@ public class MovieList extends ArrayList<Movie> implements List<Movie> {
 		return new Response.ErrorListener() {
 			@Override
 			public void onErrorResponse(VolleyError error) {
-				mMovieListAdapter.onLoadError();
+				mMovieListListener.onLoadError();
 			}
 		};
 	}

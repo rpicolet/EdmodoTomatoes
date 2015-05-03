@@ -1,22 +1,39 @@
 package rpicolet.edmodotomatoes.control;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.ListFragment;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AbsListView;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
+
+import com.android.volley.toolbox.ImageLoader;
+import com.android.volley.toolbox.NetworkImageView;
 
 import rpicolet.edmodotomatoes.MovieVolley;
+import rpicolet.edmodotomatoes.R;
+import rpicolet.edmodotomatoes.model.IMovieList;
+import rpicolet.edmodotomatoes.model.Movie;
+import rpicolet.edmodotomatoes.model.MovieList;
+
+//import rpicolet.edmodotomatoes.model.Movie;
+
+//import rpicolet.edmodotomatoes.model.Movie;
 
 /**
  * A ListFragment for a list of Movies. This fragment supports tablet devices
  * by allowing a listed movie to be marked as 'selected', indicating it is
  * currently being viewed in a {@link MovieDetailFragment}.
  * <p/>
- * Activities containing this fragment must implement the {@link Callbacks}
- * interface.
+ * Activities containing this fragment must implement:
+ * {@link rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener}
  * <p/>
  * Credit: Paging/scrolling logic heavily cannibalized from:
  *      com.github.volley_examples.app.Act_NetworkListView
@@ -24,13 +41,13 @@ import rpicolet.edmodotomatoes.MovieVolley;
  */
 public class MovieListFragment extends ListFragment {
 
-	public interface Callbacks {
+	public interface OnSelectListener {
 		public void onMovieSelected(int movieListPosition);
 	}
 
 	public class EndlessScrollListener implements AbsListView.OnScrollListener {
 		// how many entries earlier to start loading next page
-		private static final int DEFAULT_THRESHHOLD = 5;
+		private static final int DEFAULT_THRESHHOLD = 15;
 
 		private int mVisibleThreshold;
 
@@ -59,7 +76,8 @@ public class MovieListFragment extends ListFragment {
 	private static final String TAG = MovieListFragment.class.getSimpleName();
 
 	private static final String STATE_SELECTED_POSITION = "selected_position";
-	private static final Callbacks DETACHED_CALLBACKS = new Callbacks() {
+	private static final OnSelectListener DETACHED_LISTENER =
+			new OnSelectListener() {
 		@Override
 		public void onMovieSelected(int movieListPosition) {
 			// Presumed late, ignore and swallow
@@ -68,9 +86,8 @@ public class MovieListFragment extends ListFragment {
 
 	private static int sSelectedPosition = ListView.INVALID_POSITION;
 
-	private boolean mIsLoading;
-	private Callbacks mCallbacks = DETACHED_CALLBACKS;
-	private MovieListAdapter mMovieListAdapter;
+	private OnSelectListener mOnSelectListener = DETACHED_LISTENER;
+	private OnLoadAdapter mMovieListAdapter;
 
 	/**
 	 * Empty constructor required for FragmentManager
@@ -85,17 +102,17 @@ public class MovieListFragment extends ListFragment {
 		Log.d(TAG, "onAttach()");
 		super.onAttach(activity);
 
-		if (!(activity instanceof Callbacks)) {
+		if (!(activity instanceof OnSelectListener)) {
 			throw new IllegalStateException("Activity must implement Callbacks.");
 		}
-		mCallbacks = (Callbacks) activity;
+		mOnSelectListener = (OnSelectListener) activity;
 	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		Log.d(TAG, "onCreate()");
 		super.onCreate(savedInstanceState);
-		mMovieListAdapter = new MovieListAdapter(getActivity(), this,
+		mMovieListAdapter = new OnLoadAdapter(getActivity(), this,
 				MovieVolley.getImageLoader());
 		setListAdapter(mMovieListAdapter);
 	}
@@ -112,8 +129,6 @@ public class MovieListFragment extends ListFragment {
 					.getInt(STATE_SELECTED_POSITION));
 		else if (sSelectedPosition != ListView.INVALID_POSITION)
 			setSelectedPosition(sSelectedPosition);
-
-		getListView().setOnScrollListener(new EndlessScrollListener());
 	}
 
 	@Override
@@ -127,12 +142,15 @@ public class MovieListFragment extends ListFragment {
 		Log.d(TAG, "onResume()");
 		super.onResume();
 		mMovieListAdapter.loadMovies(true);
+		// Enable callbacks
+		getListView().setOnScrollListener(new EndlessScrollListener());
 	}
 
 	@Override
 	public void onPause() {
 		Log.d(TAG, "onPause()");
 		super.onPause();
+		getListView().setOnScrollListener(null);
 	}
 
 	@Override
@@ -157,7 +175,7 @@ public class MovieListFragment extends ListFragment {
 		super.onDetach();
 
 		// Reset the active callbacks interface to the dummy implementation.
-		mCallbacks = DETACHED_CALLBACKS;
+		mOnSelectListener = DETACHED_LISTENER;
 	}
 
 	// ListFragment methods
@@ -166,12 +184,12 @@ public class MovieListFragment extends ListFragment {
 	public void onListItemClick(ListView listView, View view, int position, long id) {
 		super.onListItemClick(listView, view, position, id);
 
-		// Notify the active callbacks interface (the activity, if the
-		// fragment is attached to one) that a Movie has been selected.
-		mCallbacks.onMovieSelected(position);
-
 		// Update the MovieList selected position
 		setSelectedPosition(position);
+
+		// Notify the active callbacks interface (the activity, if the
+		// fragment is attached to one) that a Movie has been selected.
+		mOnSelectListener.onMovieSelected(position);
 	}
 
 	// ListView methods
@@ -187,17 +205,9 @@ public class MovieListFragment extends ListFragment {
 				: ListView.CHOICE_MODE_NONE);
 	}
 
-	// MovieListAdapter callbacks
-	void onLoadRequest() {
-		mIsLoading = true;
-	}
-	void onLoadResponse() {
-		mIsLoading = false;
-	}
-
 	// For EndlessScrollListener
 	boolean isLoading() {
-		return mIsLoading;
+		return mMovieListAdapter.isLoading();
 	}
 
 	// Helper/utility methods
@@ -213,5 +223,102 @@ public class MovieListFragment extends ListFragment {
 			listView.setSelection(position);
 		}
 		sSelectedPosition = position;
+	}
+
+	/**
+	 * The MovieList adapter - mediates between MovieList model and this
+	 * ListFragment's built-in ListView
+	 */
+	public static class OnLoadAdapter
+			extends ArrayAdapter<Movie>
+			implements IMovieList.IOnLoadListener {
+
+		private boolean mIsEmpty = true;
+		private MovieListFragment mMovieListFragment;
+		private ImageLoader mImageLoader;
+		private LayoutInflater mInflater;
+		private MovieList mMovieList;
+
+		OnLoadAdapter(Context context,
+		              MovieListFragment fragment,
+		              ImageLoader imageLoader) {
+			super(context,
+					R.layout.movie_list_item,
+					R.id.title,
+					MovieList.getInstance());
+			mMovieListFragment = fragment;
+			mImageLoader = imageLoader;
+			mInflater = (LayoutInflater)context.getSystemService
+					(Context.LAYOUT_INFLATER_SERVICE);
+			mMovieList = MovieList.getInstance();
+			mMovieList.setListener(this);
+		}
+
+		// Required adapter method implementation
+		@Override
+		public View getView(int position, View reuseView, ViewGroup parent) {
+
+			Movie movie = getItem(position);
+			if (movie == null)
+				return null;
+
+			View view;
+			NetworkImageView thumbnailView;
+
+			if (reuseView == null) {
+				view = mInflater.inflate(R.layout.movie_list_item, null);
+				thumbnailView = (NetworkImageView) view.findViewById(R.id.thumbnail);
+				thumbnailView.setDefaultImageResId(R.drawable.no_image);
+				thumbnailView.setErrorImageResId(R.drawable.error_image);
+				// Use tag to avoid future findViewByIds...
+				view.setTag(R.id.thumbnail_view_id, thumbnailView);
+			}
+			else
+				view = reuseView;
+
+			// Load the text views
+			String text;
+			int number;
+			text = movie.getTitle();
+			((TextView)view.findViewById(R.id.title)).setText(text);
+			text = movie.getMpaaRating();
+			((TextView)view.findViewById(R.id.mpaa_rating)).setText(text);
+			Movie.Ratings ratings = movie.getRatings();
+			number = ratings.getCriticsScore();
+			text = number == Movie.UNSPECIFIED ? "" : Integer.toString(number);
+			((TextView)view.findViewById(R.id.critics_score)).setText(text);
+			number = ratings.getAudienceScore();
+			text = number == Movie.UNSPECIFIED ? "" : Integer.toString(number);
+			((TextView)view.findViewById(R.id.audience_score)).setText(text);
+
+			// Load the thumbnail view
+			thumbnailView = (NetworkImageView) view.getTag(R.id.thumbnail_view_id);
+			String thumbnailUrl = movie.getPosters().getThumbnailUrl();
+			thumbnailView.setImageUrl(thumbnailUrl, mImageLoader);
+
+			return view;
+		}
+
+		public void loadMovies(boolean onlyIfEmpty) {
+			mMovieList.loadMovies(onlyIfEmpty);
+		}
+
+		public boolean isLoading() {
+			return mMovieList.isLoading();
+		}
+
+		// IMovieListListener methods
+
+		@Override
+		public void onLoadSuccess() {
+			notifyDataSetChanged();
+		}
+
+		@Override
+		public void onLoadError() {
+			AlertDialog.Builder b = new AlertDialog.Builder(getContext());
+			b.setMessage("Movie List Load Error!");
+			b.show();
+		}
 	}
 }

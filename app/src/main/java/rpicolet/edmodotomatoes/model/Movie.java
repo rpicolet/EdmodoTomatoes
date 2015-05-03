@@ -7,12 +7,19 @@ public class Movie {
 	public static final int UNSPECIFIED = -1;
 
 	public class Ratings {
-		String mCriticsRating = null;
-		int mCriticsScore = UNSPECIFIED;
-		String mAudienceRating = null;
-		int mAudienceScore = UNSPECIFIED;
+		private String mCriticsRating = null;
+		private int mCriticsScore = UNSPECIFIED;
+		private String mAudienceRating = null;
+		private int mAudienceScore = UNSPECIFIED;
 
-		Ratings() {}
+		Ratings(JSONObject jsonRatings) {
+			if (jsonRatings != null) {
+				mCriticsRating = jsonRatings.optString("critics_rating");
+				mCriticsScore = jsonRatings.optInt("critics_score");
+				mAudienceRating = jsonRatings.optString("audience_rating");
+				mAudienceScore = jsonRatings.optInt("audience_score");
+			}
+		}
 
 		public String getCriticsRating() {return mCriticsRating;}
 		public int getCriticsScore() {return mCriticsScore;}
@@ -21,12 +28,19 @@ public class Movie {
 	}
 
 	public class Posters {
-		String mThumbnailUrl = null;
-		String mProfileUrl = null;
-		String mDetailedUrl = null;
-		String mOriginalUrl = null;
+		private String mThumbnailUrl = null;
+		private String mProfileUrl = null;
+		private String mDetailedUrl = null;
+		private String mOriginalUrl = null;
 
-		Posters() {}
+		Posters(JSONObject jsonPosters) {
+			if (jsonPosters != null) {
+				mThumbnailUrl = jsonPosters.optString("thumbnail");
+				mProfileUrl = jsonPosters.optString("profile");
+				mDetailedUrl = jsonPosters.optString("detailed");
+				mOriginalUrl = jsonPosters.optString("original");
+			}
+		}
 
 		public String getThumbnailUrl() {return mThumbnailUrl;}
 		public String getProfileUrl() {return mProfileUrl;}
@@ -34,15 +48,14 @@ public class Movie {
 		public String getOriginalUrl() {return mOriginalUrl;}
 	}
 
-	String mId = null;
-	String mTitle = null;
-	String[] mGenres = null;
-	String mMpaaRating = null;
-	int mRuntime = -1;
-	String mCriticsConsensus = null;
-	Ratings mRatings = new Ratings();
-	String mSynopsis = null;
-	Posters mPosters = new Posters();
+	private String mId = null;
+	private String mTitle = null;
+	private String mMpaaRating = null;
+	private int mRuntime = -1;
+	private String mCriticsConsensus = null;
+	private Ratings mRatings = null;
+	private String mSynopsis = null;
+	private Posters mPosters = null;
 
 	Movie(JSONObject jsonMovie) {
 		mId = jsonMovie.optString("id");
@@ -50,21 +63,9 @@ public class Movie {
 		mMpaaRating = jsonMovie.optString("mpaa_rating");
 		mRuntime = jsonMovie.optInt("runtime");
 		mCriticsConsensus = jsonMovie.optString("critics_consensus");
-		JSONObject jsonRatings = jsonMovie.optJSONObject("ratings");
-		if (jsonRatings != null) {
-			mRatings.mCriticsRating = jsonRatings.optString("critics_rating");
-			mRatings.mCriticsScore = jsonRatings.optInt("critics_score");
-			mRatings.mAudienceRating = jsonRatings.optString("audience_rating");
-			mRatings.mAudienceScore = jsonRatings.optInt("audience_score");
-		}
+		mRatings = new Ratings(jsonMovie.optJSONObject("ratings"));
 		mSynopsis = jsonMovie.optString("synopsis");
-		JSONObject jsonPosters = jsonMovie.optJSONObject("posters");
-		if (jsonPosters != null) {
-			mPosters.mThumbnailUrl = jsonPosters.optString("thumbnail");
-			mPosters.mProfileUrl = jsonPosters.optString("profile");
-			mPosters.mDetailedUrl = jsonPosters.optString("detailed");
-			mPosters.mOriginalUrl = jsonPosters.optString("original");
-		}
+		mPosters = new Posters (jsonMovie.optJSONObject("posters"));
 	}
 
 	@Override

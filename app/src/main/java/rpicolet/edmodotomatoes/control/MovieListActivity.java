@@ -6,7 +6,7 @@ import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 
 import rpicolet.edmodotomatoes.R;
-
+import rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener;
 
 /**
  * An activity representing a list of Movies. This activity
@@ -21,11 +21,11 @@ import rpicolet.edmodotomatoes.R;
  * (if present) is a {@link MovieDetailFragment}.
  * <p/>
  * This activity also implements the required
- * {@link MovieListFragment.Callbacks} interface
+ * {@link rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener} interface
  * to listen for Movie selections.
  */
 public class MovieListActivity extends FragmentActivity
-		implements MovieListFragment.Callbacks {
+		implements OnSelectListener {
 
 	private static final String TAG = MovieListActivity.class.getSimpleName();
 
@@ -92,7 +92,7 @@ public class MovieListActivity extends FragmentActivity
 	}
 
 	/**
-	 * Callback method from {@link MovieListFragment.Callbacks}
+	 * Callback method from {@link rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener}
 	 * indicating that the Movie at the given list position was selected.
 	 */
 	@Override
