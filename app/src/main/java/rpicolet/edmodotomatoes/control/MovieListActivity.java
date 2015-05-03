@@ -1,8 +1,8 @@
 package rpicolet.edmodotomatoes.control;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 
 import rpicolet.edmodotomatoes.R;
@@ -24,7 +24,7 @@ import rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener;
  * {@link rpicolet.edmodotomatoes.control.MovieListFragment.OnSelectListener} interface
  * to listen for Movie selections.
  */
-public class MovieListActivity extends FragmentActivity
+public class MovieListActivity extends Activity
 		implements OnSelectListener {
 
 	private static final String TAG = MovieListActivity.class.getSimpleName();
@@ -56,7 +56,7 @@ public class MovieListActivity extends FragmentActivity
 
 			// In two-pane mode, MovieList entries should be given the
 			// 'selected' state when touched.
-			((MovieListFragment) getSupportFragmentManager()
+			((MovieListFragment) getFragmentManager()
 					.findFragmentById(R.id.movie_list))
 					.setSelectedOnItemClick(true);
 		}
@@ -106,7 +106,7 @@ public class MovieListActivity extends FragmentActivity
 					movieListPosition);
 			MovieDetailFragment fragment = new MovieDetailFragment();
 			fragment.setArguments(arguments);
-			getSupportFragmentManager().beginTransaction()
+			getFragmentManager().beginTransaction()
 					.replace(R.id.movie_detail_container, fragment)
 					.commit();
 

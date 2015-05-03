@@ -1,8 +1,8 @@
 package rpicolet.edmodotomatoes.control;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 
 import rpicolet.edmodotomatoes.R;
@@ -17,7 +17,7 @@ import rpicolet.edmodotomatoes.R;
  * This activity is mostly just a 'shell' activity containing nothing
  * more than a {@link MovieDetailFragment}.
  */
-public class MovieDetailActivity extends AppCompatActivity {
+public class MovieDetailActivity extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -25,7 +25,7 @@ public class MovieDetailActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_movie_detail);
 
 		// Show the Up button in the action bar.
-		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		getActionBar().setDisplayHomeAsUpEnabled(true);
 
 		// savedInstanceState is non-null when there is fragment state
 		// saved from previous configurations of this activity
@@ -44,7 +44,7 @@ public class MovieDetailActivity extends AppCompatActivity {
 					getIntent().getIntExtra(MovieDetailFragment.ARG_MOVIE_LIST_POSITION, 0));
 			MovieDetailFragment fragment = new MovieDetailFragment();
 			fragment.setArguments(arguments);
-			getSupportFragmentManager().beginTransaction()
+			getFragmentManager().beginTransaction()
 					.add(R.id.movie_detail_container, fragment)
 					.commit();
 		}
